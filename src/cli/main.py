@@ -243,6 +243,18 @@ def inventory_remove(item_id):
         console.print(f"[red]No inventory item with id={item_id}.[/red]")
 
 
+@inventory.command("update")
+@click.argument("item_id", type=int)
+@click.argument("quantity", type=int)
+def inventory_update(item_id, quantity):
+    """Update the quantity of an inventory item by its ID."""
+    if quantity <= 0:
+        console.print("[red]Quantity must be greater than 0.[/red]")
+        return
+    db.update_inventory_quantity(item_id, quantity)
+    console.print(f"[green]Updated id={item_id} quantity to {quantity}.[/green]")
+
+
 # ── web ───────────────────────────────────────────────────────────────────────
 
 @cli.command()
