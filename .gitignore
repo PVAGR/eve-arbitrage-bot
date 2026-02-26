@@ -36,3 +36,6 @@ secrets.yaml
 # Temp files
 tmpclaude-*
 nul
+
+# PyInstaller
+*.spec

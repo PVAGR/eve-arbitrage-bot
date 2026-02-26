@@ -8,18 +8,28 @@ Tables:
 """
 import sqlite3
 import os
+import sys
 import json
 from datetime import datetime
 
-DB_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "data", "eve_arbitrage.db"
-)
+
+def _db_path() -> str:
+    """
+    Resolve the database file path.
+    - Frozen (.exe): next to the executable so data persists between runs.
+    - Script: <project_root>/data/eve_arbitrage.db
+    """
+    if getattr(sys, "frozen", False):
+        base = os.path.dirname(sys.executable)
+    else:
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base, "data", "eve_arbitrage.db")
 
 
 def get_connection() -> sqlite3.Connection:
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
+    db_path = _db_path()
+    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+    conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn

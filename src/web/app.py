@@ -13,6 +13,8 @@ Endpoints:
 """
 from __future__ import annotations
 
+import os
+import sys
 import threading
 from flask import Flask, jsonify, render_template, request, abort
 
@@ -21,7 +23,17 @@ from models import database as db
 from engine import scanner
 from api import esi
 
-app = Flask(__name__)
+# When frozen by PyInstaller, templates and static files live in sys._MEIPASS.
+# In dev, Flask resolves them relative to this file automatically.
+if getattr(sys, "frozen", False):
+    _web_root = sys._MEIPASS
+    app = Flask(
+        __name__,
+        template_folder=os.path.join(_web_root, "templates"),
+        static_folder=os.path.join(_web_root, "static"),
+    )
+else:
+    app = Flask(__name__)
 db.init_db()
 
 _scan_lock = threading.Lock()
