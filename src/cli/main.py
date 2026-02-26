@@ -251,8 +251,11 @@ def inventory_update(item_id, quantity):
     if quantity <= 0:
         console.print("[red]Quantity must be greater than 0.[/red]")
         return
-    db.update_inventory_quantity(item_id, quantity)
-    console.print(f"[green]Updated id={item_id} quantity to {quantity}.[/green]")
+    updated = db.update_inventory_quantity(item_id, quantity)
+    if updated:
+        console.print(f"[green]Updated id={item_id} quantity to {quantity}.[/green]")
+    else:
+        console.print(f"[red]No inventory item with id={item_id}.[/red]")
 
 
 # ── web ───────────────────────────────────────────────────────────────────────

@@ -10,7 +10,7 @@ import sqlite3
 import os
 import sys
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 def _db_path() -> str:
@@ -22,7 +22,7 @@ def _db_path() -> str:
     if getattr(sys, "frozen", False):
         base = os.path.dirname(sys.executable)
     else:
-        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        base = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     return os.path.join(base, "data", "eve_arbitrage.db")
 
 
@@ -94,7 +94,7 @@ def get_cached_orders(region_id: int, page: int, ttl_minutes: int) -> list | Non
     if row is None:
         return None
     fetched = datetime.fromisoformat(row["fetched_at"])
-    age_minutes = (datetime.utcnow() - fetched).total_seconds() / 60
+    age_minutes = (datetime.now(timezone.utc).replace(tzinfo=None) - fetched).total_seconds() / 60
     if age_minutes > ttl_minutes:
         return None
     return json.loads(row["orders_json"])
@@ -108,7 +108,7 @@ def upsert_cached_orders(region_id: int, page: int, orders: list):
                ON CONFLICT(region_id, page) DO UPDATE SET
                  fetched_at=excluded.fetched_at,
                  orders_json=excluded.orders_json""",
-            (region_id, page, datetime.utcnow().isoformat(), json.dumps(orders))
+            (region_id, page, datetime.now(timezone.utc).replace(tzinfo=None).isoformat(), json.dumps(orders))
         )
 
 
@@ -123,7 +123,7 @@ def get_cached_item(type_id: int, ttl_hours: int = 24) -> dict | None:
     if row is None:
         return None
     fetched = datetime.fromisoformat(row["fetched_at"])
-    age_hours = (datetime.utcnow() - fetched).total_seconds() / 3600
+    age_hours = (datetime.now(timezone.utc).replace(tzinfo=None) - fetched).total_seconds() / 3600
     if age_hours > ttl_hours:
         return None
     return {"name": row["name"], "volume": row["volume"]}
@@ -138,7 +138,7 @@ def upsert_item(type_id: int, name: str, volume: float):
                  name=excluded.name,
                  volume=excluded.volume,
                  fetched_at=excluded.fetched_at""",
-            (type_id, name, volume, datetime.utcnow().isoformat())
+            (type_id, name, volume, datetime.now(timezone.utc).replace(tzinfo=None).isoformat())
         )
 
 
@@ -148,7 +148,7 @@ def save_results(results: list[dict]):
     """Persist a list of arbitrage result dicts, replacing old results for same region pair."""
     if not results:
         return
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
     with get_connection() as conn:
         # Delete previous results for each unique pair in this batch
         pairs = {(r["buy_region"], r["sell_region"]) for r in results}
@@ -201,7 +201,7 @@ def add_inventory(type_id: int, item_name: str, quantity: int,
                (type_id, item_name, quantity, cost_basis_isk, station, added_at)
                VALUES (?, ?, ?, ?, ?, ?)""",
             (type_id, item_name, quantity, cost_basis_isk, station,
-             datetime.utcnow().isoformat())
+             datetime.now(timezone.utc).replace(tzinfo=None).isoformat())
         )
         return cur.lastrowid
 
@@ -220,9 +220,10 @@ def delete_inventory(row_id: int) -> bool:
     return cur.rowcount > 0
 
 
-def update_inventory_quantity(row_id: int, new_quantity: int):
+def update_inventory_quantity(row_id: int, new_quantity: int) -> bool:
     with get_connection() as conn:
-        conn.execute(
+        cur = conn.execute(
             "UPDATE inventory SET quantity=? WHERE id=?",
             (new_quantity, row_id)
         )
+    return cur.rowcount > 0

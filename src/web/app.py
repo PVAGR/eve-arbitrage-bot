@@ -193,7 +193,8 @@ def api_inventory_patch(row_id: int):
         abort(400, "quantity must be an integer")
     if new_qty <= 0:
         abort(400, "quantity must be > 0")
-    db.update_inventory_quantity(row_id, new_qty)
+    if not db.update_inventory_quantity(row_id, new_qty):
+        abort(404, "Inventory item not found")
     return jsonify({"updated": True})
 
 

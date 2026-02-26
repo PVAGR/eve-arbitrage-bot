@@ -212,6 +212,7 @@ function renderInventory(items) {
         <td class="num ${pnlClass}">${pnlStr}</td>
         <td>${escHtml(item.station || '—')}</td>
         <td>
+          <button class="btn btn-sm" aria-label="Update quantity for ${escHtml(item.item_name)}" onclick="updateInventoryQty(${item.id}, ${item.quantity})">Update Qty</button>
           <button class="btn btn-danger" onclick="deleteInventoryItem(${item.id})">Remove</button>
         </td>
       </tr>`;
@@ -226,6 +227,23 @@ function renderInventory(items) {
 async function deleteInventoryItem(id) {
   if (!confirm('Remove this item from inventory?')) return;
   await fetch(`/api/inventory/${id}`, { method: 'DELETE' });
+  loadInventory();
+}
+
+async function updateInventoryQty(id, currentQty) {
+  const input = prompt('New quantity:', currentQty);
+  if (input === null) return;
+  const qty = parseInt(input, 10);
+  if (isNaN(qty) || qty <= 0) { alert('Quantity must be a positive integer.'); return; }
+  const res = await fetch(`/api/inventory/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ quantity: qty }),
+  });
+  if (!res.ok) {
+    const d = await res.json().catch(() => ({}));
+    alert(d.description || `Error ${res.status}`);
+  }
   loadInventory();
 }
 
