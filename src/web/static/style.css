@@ -1,0 +1,263 @@
+/* EVE Arbitrage Bot — dark space theme */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #0a0d14;
+  --bg2:       #10141f;
+  --bg3:       #161c2e;
+  --border:    #1e2740;
+  --accent:    #00d4ff;
+  --accent2:   #0080ff;
+  --green:     #00e676;
+  --red:       #ff5252;
+  --yellow:    #ffd740;
+  --text:      #cdd6f4;
+  --muted:     #6c7a9c;
+  --font:      'Segoe UI', system-ui, sans-serif;
+  --mono:      'Cascadia Code', 'Consolas', monospace;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  min-height: 100vh;
+}
+
+/* ── Header ───────────────────────────────────────────── */
+header {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+}
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+h1 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.5px;
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* ── Tabs ───────────────────────────────────────────────── */
+.tabs {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  display: flex;
+  gap: 4px;
+}
+.tab {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 13px;
+  font-family: var(--font);
+  padding: 12px 16px;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+.tab:hover { color: var(--text); }
+.tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* ── Tab content ────────────────────────────────────────── */
+.tab-content { padding: 20px 24px; }
+.hidden { display: none !important; }
+
+/* ── Buttons ────────────────────────────────────────────── */
+.btn {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13px;
+  font-family: var(--font);
+  padding: 6px 14px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.btn:hover { background: var(--border); }
+.btn.btn-primary {
+  background: var(--accent2);
+  border-color: var(--accent2);
+  color: #fff;
+  font-weight: 600;
+}
+.btn.btn-primary:hover { background: #0070e0; }
+.btn.btn-danger {
+  background: transparent;
+  border-color: var(--red);
+  color: var(--red);
+}
+.btn.btn-danger:hover { background: rgba(255,82,82,0.1); }
+
+/* ── Toolbar ────────────────────────────────────────────── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.toolbar input, .toolbar select {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: var(--font);
+  padding: 6px 12px;
+  outline: none;
+  min-width: 180px;
+}
+.toolbar input:focus, .toolbar select:focus {
+  border-color: var(--accent2);
+}
+
+/* ── Tables ─────────────────────────────────────────────── */
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 800px;
+}
+thead {
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+}
+th {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  padding: 10px 14px;
+  text-align: left;
+  text-transform: uppercase;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+th:hover { color: var(--accent); }
+th.num, td.num { text-align: right; font-family: var(--mono); }
+td {
+  border-top: 1px solid var(--border);
+  padding: 9px 14px;
+  white-space: nowrap;
+}
+tr:hover td { background: rgba(0, 212, 255, 0.04); }
+
+.profit-pos { color: var(--green); font-weight: 600; }
+.profit-neg { color: var(--red); }
+.margin-high { color: var(--green); }
+.margin-mid  { color: var(--yellow); }
+.margin-low  { color: var(--muted); }
+
+.center { text-align: center; }
+.muted  { color: var(--muted); font-size: 12px; }
+
+/* ── Lookup ──────────────────────────────────────────────── */
+.lookup-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.lookup-bar input {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: var(--font);
+  padding: 8px 14px;
+  outline: none;
+  flex: 1;
+  max-width: 400px;
+}
+.lookup-bar input:focus { border-color: var(--accent2); }
+
+.lookup-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  max-width: 700px;
+}
+.lookup-card h2 { font-size: 16px; margin-bottom: 4px; }
+.lookup-meta { color: var(--muted); font-size: 12px; margin-bottom: 16px; }
+
+/* ── Modal ───────────────────────────────────────────────── */
+.modal {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100;
+}
+.modal-box {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 28px;
+  width: 420px;
+  max-width: 95vw;
+}
+.modal-box h2 { font-size: 16px; margin-bottom: 20px; }
+.modal-box label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.modal-box input {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: var(--font);
+  padding: 8px 12px;
+  outline: none;
+}
+.modal-box input:focus { border-color: var(--accent2); }
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+.error {
+  color: var(--red);
+  font-size: 12px;
+  margin-top: 10px;
+}
+
+/* ── Scan status indicator ──────────────────────────────── */
+.scanning { animation: pulse 1s infinite; }
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}

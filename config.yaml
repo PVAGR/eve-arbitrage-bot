@@ -1,0 +1,39 @@
+fees:
+  broker_fee_buy: 0.03       # Adjust based on your Broker Relations skill level
+  broker_fee_sell: 0.03      # Typically 3-5%
+  sales_tax: 0.08            # Adjust based on your Accounting skill level (base 8%)
+  hauling_isk_per_m3: 800    # ISK cost per m3 to haul between regions (0 to ignore)
+
+filters:
+  min_profit_margin_pct: 10  # Minimum % profit after all fees
+  min_net_isk_profit: 1000000  # Minimum ISK profit per unit (1M ISK)
+  max_investment_per_item: 0   # Max ISK to invest per item (0 = no limit)
+  min_volume_available: 1      # Minimum units available at best price
+
+regions:
+  - name: Jita
+    id: 10000002
+  - name: Amarr
+    id: 10000043
+  - name: Dodixie
+    id: 10000032
+  - name: Rens
+    id: 10000030
+  - name: Hek
+    id: 10000042
+
+scan:
+  cache_ttl_minutes: 5
+  # Region pairs to compare for arbitrage (both directions checked)
+  pairs:
+    - [Jita, Amarr]
+    - [Jita, Dodixie]
+    - [Jita, Rens]
+    - [Jita, Hek]
+    - [Amarr, Dodixie]
+    - [Amarr, Rens]
+
+web:
+  host: 127.0.0.1
+  port: 5000
+  auto_refresh_seconds: 60

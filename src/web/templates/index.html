@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EVE Arbitrage Bot</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <h1>&#9670; EVE Arbitrage Bot</h1>
+      <div class="header-right">
+        <span id="last-scan-label" class="muted">Last scan: —</span>
+        <button id="btn-scan" class="btn btn-primary" onclick="triggerScan()">Run Scan</button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" onclick="showTab('opportunities')">Opportunities</button>
+    <button class="tab" onclick="showTab('inventory')">Inventory</button>
+    <button class="tab" onclick="showTab('lookup')">Price Lookup</button>
+  </nav>
+
+  <!-- ── OPPORTUNITIES ───────────────────────────────────────────────── -->
+  <section id="tab-opportunities" class="tab-content active">
+    <div class="toolbar">
+      <input id="filter-item" type="text" placeholder="Filter by item name…" oninput="filterOpportunities()" />
+      <select id="filter-pair" onchange="filterOpportunities()">
+        <option value="">All routes</option>
+      </select>
+      <span id="opp-count" class="muted"></span>
+    </div>
+
+    <div class="table-wrap">
+      <table id="opp-table">
+        <thead>
+          <tr>
+            <th onclick="sortBy('item_name')">Item &#8597;</th>
+            <th onclick="sortBy('buy_region')">Buy In &#8597;</th>
+            <th onclick="sortBy('sell_region')">Sell In &#8597;</th>
+            <th onclick="sortBy('buy_price')" class="num">Buy Price &#8597;</th>
+            <th onclick="sortBy('sell_price')" class="num">Sell Price &#8597;</th>
+            <th onclick="sortBy('net_profit_per_unit')" class="num">Net / Unit &#8597;</th>
+            <th onclick="sortBy('profit_margin_pct')" class="num">Margin % &#8597;</th>
+            <th onclick="sortBy('volume_available')" class="num">Volume &#8597;</th>
+            <th onclick="sortBy('total_profit_potential')" class="num">Total Profit &#8597;</th>
+          </tr>
+        </thead>
+        <tbody id="opp-tbody">
+          <tr><td colspan="9" class="muted center">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── INVENTORY ──────────────────────────────────────────────────── -->
+  <section id="tab-inventory" class="tab-content hidden">
+    <div class="toolbar">
+      <button class="btn btn-primary" onclick="openAddModal()">+ Add Item</button>
+      <span id="inv-summary" class="muted"></span>
+    </div>
+
+    <div class="table-wrap">
+      <table id="inv-table">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th class="num">Qty</th>
+            <th class="num">Cost Basis / Unit</th>
+            <th class="num">Total Cost</th>
+            <th class="num">Market Price (Jita)</th>
+            <th class="num">Unrealized P&amp;L</th>
+            <th>Station</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="inv-tbody">
+          <tr><td colspan="8" class="muted center">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── PRICE LOOKUP ───────────────────────────────────────────────── -->
+  <section id="tab-lookup" class="tab-content hidden">
+    <div class="lookup-bar">
+      <input id="lookup-input" type="text" placeholder="Enter item name, e.g. Tritanium" />
+      <button class="btn btn-primary" onclick="doLookup()">Search</button>
+    </div>
+    <div id="lookup-result"></div>
+  </section>
+
+  <!-- ── ADD INVENTORY MODAL ─────────────────────────────────────────── -->
+  <div id="add-modal" class="modal hidden">
+    <div class="modal-box">
+      <h2>Add Inventory Item</h2>
+      <label>Item Name
+        <input id="add-name" type="text" placeholder="e.g. Tritanium" />
+      </label>
+      <label>Quantity
+        <input id="add-qty" type="number" min="1" placeholder="10000" />
+      </label>
+      <label>Cost Basis per Unit (ISK)
+        <input id="add-cost" type="number" min="0" step="0.01" placeholder="5.50" />
+      </label>
+      <label>Station (optional)
+        <input id="add-station" type="text" placeholder="Jita IV - Moon 4 - Caldari Navy Assembly Plant" />
+      </label>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeAddModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitAddItem()">Add</button>
+      </div>
+      <p id="add-error" class="error hidden"></p>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    const AUTO_REFRESH = {{ auto_refresh }} * 1000;
+    init(AUTO_REFRESH);
+  </script>
+</body>
+</html>
