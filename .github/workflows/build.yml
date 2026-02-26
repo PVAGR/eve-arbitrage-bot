@@ -60,7 +60,9 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release delete latest --yes --cleanup-tag 2>$null; $true
+        run: |
+          gh release delete latest --yes --cleanup-tag 2>$null
+          $LASTEXITCODE = 0
 
       - name: Publish GitHub Release
         shell: pwsh
