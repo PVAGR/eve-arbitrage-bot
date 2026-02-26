@@ -65,12 +65,13 @@ def api_scan_status():
 @app.route("/api/scan/run", methods=["POST"])
 def api_scan_run():
     global _scan_running
-    if _scan_running:
-        return jsonify({"status": "already_running"}), 409
+    with _scan_lock:
+        if _scan_running:
+            return jsonify({"status": "already_running"}), 409
+        _scan_running = True
 
     def _do_scan():
         global _scan_running
-        _scan_running = True
         try:
             scanner.run_scan(silent=True)
         finally:
