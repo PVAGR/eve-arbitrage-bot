@@ -212,3 +212,110 @@ def search_type_ids(query: str) -> list[dict]:
         info = get_item_info(tid)
         results.append({"type_id": tid, "name": info["name"]})
     return results
+
+
+# ── System and station info ──────────────────────────────────────────────────
+
+def get_system_info(system_id: int) -> dict:
+    """
+    Get solar system information.
+    Returns dict with name, security_status, etc.
+    Cached for 24 hours.
+    """
+    cached = db.get_cached_system(system_id)
+    if cached:
+        return cached
+    
+    url = f"{BASE_URL}/universe/systems/{system_id}/"
+    try:
+        resp = _get(url, {"datasource": "tranquility"})
+        data = resp.json()
+        info = {
+            "system_id": system_id,
+            "name": data.get("name", f"System {system_id}"),
+            "security_status": data.get("security_status", 0.0),
+            "constellation_id": data.get("constellation_id"),
+            "star_id": data.get("star_id"),
+        }
+    except Exception:
+        info = {
+            "system_id": system_id,
+            "name": f"System {system_id}",
+            "security_status": 0.0,
+        }
+    
+    db.upsert_system(system_id, info)
+    return info
+
+
+def get_station_info(station_id: int) -> dict:
+    """
+    Get station information.
+    Returns dict with name, system_id, etc.
+    Cached for 24 hours.
+    """
+    cached = db.get_cached_station(station_id)
+    if cached:
+        return cached
+    
+    url = f"{BASE_URL}/universe/stations/{station_id}/"
+    try:
+        resp = _get(url, {"datasource": "tranquility"})
+        data = resp.json()
+        info = {
+            "station_id": station_id,
+            "name": data.get("name", f"Station {station_id}"),
+            "system_id": data.get("system_id"),
+            "type_id": data.get("type_id"),
+        }
+    except Exception:
+        info = {
+            "station_id": station_id,
+            "name": f"Station {station_id}",
+        }
+    
+    db.upsert_station(station_id, info)
+    return info
+
+
+# ── ESI class interface ──────────────────────────────────────────────────────
+
+class ESI:
+    """Class wrapper for ESI API operations."""
+    
+    def __init__(self, config: dict = None):
+        """Initialize ESI client. Config parameter is optional for compatibility."""
+        pass
+    
+    def get_sell_orders(self, region_id: int, ttl_minutes: int = 60) -> dict:
+        """Get sell orders for a region."""
+        return get_sell_orders(region_id)
+    
+    def get_buy_orders(self, region_id: int, ttl_minutes: int = 60) -> dict:
+        """Get buy orders for a region."""
+        return get_buy_orders(region_id)
+    
+    def best_sell_price(self, orders: list) -> tuple:
+        """Get best sell price from orders list."""
+        return best_sell_price(orders)
+    
+    def best_buy_price(self, orders: list) -> tuple:
+        """Get best buy price from orders list."""
+        return best_buy_price(orders)
+    
+    def search_type_ids(self, search_term: str) -> list:
+        """Search for items by name."""
+        return search_types(search_term)
+    
+    def get_item_info(self, type_id: int) -> dict:
+        """Get item information."""
+        return get_item_info(type_id)
+    
+    def get_system_info(self, system_id: int) -> dict:
+        """Get system information."""
+        return get_system_info(system_id)
+    
+    def get_station_info(self, station_id: int) -> dict:
+        """Get station information."""
+        return get_station_info(station_id)
+

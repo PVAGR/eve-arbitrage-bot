@@ -8,12 +8,26 @@ let _refreshTimer = null;
 // ── Bootstrap ─────────────────────────────────────────────────────────────
 
 function init(autoRefreshMs) {
+  // Load based on what's enabled
+  if (typeof HAS_CHARACTER !== 'undefined' && HAS_CHARACTER) {
+    loadCharacterStatus();
+  }
+  if (typeof HAS_WORMHOLES !== 'undefined' && HAS_WORMHOLES) {
+    loadWormholes();
+  }
+  if (typeof HAS_TWITCH !== 'undefined' && HAS_TWITCH) {
+    updateTwitchStatus();
+  }
+  
   loadOpportunities();
   loadInventory();
   updateScanStatus();
 
   if (autoRefreshMs > 0) {
     setInterval(() => {
+      if (HAS_CHARACTER) loadCharacterStatus();
+      if (HAS_WORMHOLES) loadWormholes();
+      if (HAS_TWITCH) updateTwitchStatus();
       loadOpportunities();
       updateScanStatus();
     }, autoRefreshMs);
@@ -29,6 +43,8 @@ function showTab(name) {
   event.target.classList.add('active');
 
   if (name === 'inventory') loadInventory();
+  if (name === 'character') loadCharacterStatus();
+  if (name === 'wormholes') loadWormholes();
 }
 
 // ── Opportunities ─────────────────────────────────────────────────────────
@@ -377,4 +393,267 @@ function escHtml(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+// ── Character Tracking ────────────────────────────────────────────────────
+
+async function loadCharacterStatus() {
+  try {
+    const res = await fetch('/api/character/status');
+    if (!res.ok) return;
+    const data = await res.json();
+    
+    // Update header badge
+    const badge = document.getElementById('char-status');
+    if (badge) {
+      const online = data.online?.online ? '🟢' : '🔴';
+      badge.textContent = `${online} ${data.character_name}`;
+    }
+    
+    // Update location
+    const loc = data.location;
+    document.getElementById('char-location').innerHTML = `
+      <strong>${escHtml(loc.solar_system_name)}</strong><br>
+      ${loc.station_name || loc.structure_name || 'In space'}
+    `;
+    
+    // Update ship
+    const ship = data.ship;
+    document.getElementById('char-ship').innerHTML = `
+      <strong>${escHtml(ship.ship_type_name)}</strong><br>
+      ${escHtml(ship.ship_name)}
+    `;
+    
+    // Update wallet
+    document.getElementById('char-wallet').innerHTML = `
+      <strong>${fmtIsk(data.wallet.balance)}</strong>
+    `;
+    
+    // Update online
+    const lastLogin = data.online?.last_login ? new Date(data.online.last_login).toLocaleString() : '—';
+    document.getElementById('char-online').innerHTML = `
+      ${data.online?.online ? '<span style="color: green">● Online</span>' : '<span style="color: gray">○ Offline</span>'}<br>
+      Last login: ${lastLogin}
+    `;
+    
+    // Load transactions and orders
+    loadCharacterTransactions();
+    loadCharacterOrders();
+  } catch (e) {
+    console.error('Failed to load character status:', e);
+  }
+}
+
+async function loadCharacterTransactions() {
+  try {
+    const res = await fetch('/api/character/transactions?limit=20');
+    if (!res.ok) return;
+    const data = await res.json();
+    
+    const tbody = document.getElementById('char-transactions-tbody');
+    if (!data.transactions || !data.transactions.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="muted center">No recent transactions</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = data.transactions.map(t => {
+      const date = new Date(t.date).toLocaleString();
+      const type = t.is_buy ? 'BUY' : 'SELL';
+      const typeClass = t.is_buy ? 'profit-neg' : 'profit-pos';
+      return `
+        <tr>
+          <td>${date}</td>
+          <td>${escHtml(t.item_name)}</td>
+          <td class="${typeClass}">${type}</td>
+          <td class="num">${fmtNum(t.quantity)}</td>
+          <td class="num">${fmtIsk(t.unit_price)}</td>
+          <td class="num">${fmtIsk(t.total_value)}</td>
+        </tr>`;
+    }).join('');
+  } catch (e) {
+    console.error('Failed to load transactions:', e);
+  }
+}
+
+async function loadCharacterOrders() {
+  try {
+    const res = await fetch('/api/character/orders');
+    if (!res.ok) return;
+    const data = await res.json();
+    
+    const tbody = document.getElementById('char-orders-tbody');
+    if (!data.orders || !data.orders.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="muted center">No active orders</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = data.orders.map(o => {
+      const type = o.is_buy_order ? 'BUY' : 'SELL';
+      const typeClass = o.is_buy_order ? 'profit-neg' : 'profit-pos';
+      return `
+        <tr>
+          <td>${escHtml(o.item_name)}</td>
+          <td class="${typeClass}">${type}</td>
+          <td class="num">${fmtIsk(o.price)}</td>
+          <td class="num">${fmtNum(o.volume_remain)}</td>
+          <td class="num">${fmtNum(o.volume_total)}</td>
+          <td>${o.duration} days</td>
+          <td>${escHtml(o.state)}</td>
+        </tr>`;
+    }).join('');
+  } catch (e) {
+    console.error('Failed to load orders:', e);
+  }
+}
+
+// ── Wormhole Tracking ─────────────────────────────────────────────────────
+
+async function loadWormholes() {
+  loadWHConnections();
+  loadWHHistory();
+}
+
+async function loadWHConnections() {
+  try {
+    const res = await fetch('/api/wormholes/connections');
+    if (!res.ok) return;
+    const data = await res.json();
+    
+    const tbody = document.getElementById('wh-connections-tbody');
+    if (!data.connections || !data.connections.length) {
+      tbody.innerHTML = '<tr><td colspan="8" class="muted center">No active connections</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = data.connections.map(c => {
+      const lastSeen = new Date(c.last_seen * 1000).toLocaleString();
+      return `
+        <tr>
+          <td>${escHtml(c.source_system_name)}</td>
+          <td>→</td>
+          <td>${escHtml(c.dest_system_name)}</td>
+          <td>${escHtml(c.wh_type)}</td>
+          <td>${escHtml(c.mass_remaining)}</td>
+          <td>${escHtml(c.time_remaining)}</td>
+          <td>${lastSeen}</td>
+          <td>
+            <button class="btn btn-sm" onclick="expireWHConnection(${c.id})">Expire</button>
+          </td>
+        </tr>`;
+    }).join('');
+  } catch (e) {
+    console.error('Failed to load WH connections:', e);
+  }
+}
+
+async function loadWHHistory() {
+  try {
+    const res = await fetch('/api/wormholes/history?limit=20');
+    if (!res.ok) return;
+    const data = await res.json();
+    
+    const tbody = document.getElementById('wh-history-tbody');
+    if (!data.history || !data.history.length) {
+      tbody.innerHTML = '<tr><td colspan="3" class="muted center">No jump history</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = data.history.map(h => {
+      const time = new Date(h.timestamp * 1000).toLocaleString();
+      return `
+        <tr>
+          <td>${escHtml(h.system_name)}</td>
+          <td>${time}</td>
+          <td>${escHtml(h.notes || '—')}</td>
+        </tr>`;
+    }).join('');
+  } catch (e) {
+    console.error('Failed to load WH history:', e);
+  }
+}
+
+async function expireWHConnection(connId) {
+  if (!confirm('Mark this connection as expired?')) return;
+  await fetch(`/api/wormholes/connection/${connId}`, { method: 'DELETE' });
+  loadWHConnections();
+}
+
+function openAddWHModal() {
+  document.getElementById('add-wh-modal').classList.remove('hidden');
+  document.getElementById('wh-source').focus();
+}
+
+function closeAddWHModal() {
+  document.getElementById('add-wh-modal').classList.add('hidden');
+  ['wh-source', 'wh-dest', 'wh-type'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('wh-mass').value = 'Stable';
+  document.getElementById('wh-time').value = 'Fresh';
+  const err = document.getElementById('add-wh-error');
+  if (err) {
+    err.textContent = '';
+    err.classList.add('hidden');
+  }
+}
+
+async function submitAddWH() {
+  const source = parseInt(document.getElementById('wh-source').value, 10);
+  const dest = parseInt(document.getElementById('wh-dest').value, 10);
+  const type = document.getElementById('wh-type').value.trim();
+  const mass = document.getElementById('wh-mass').value;
+  const time = document.getElementById('wh-time').value;
+  const err = document.getElementById('add-wh-error');
+
+  if (!source || !dest || !type) {
+    err.textContent = 'Source, destination, and WH type are required.';
+    err.classList.remove('hidden');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/wormholes/connection', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        source_system_id: source,
+        dest_system_id: dest,
+        wh_type: type,
+        mass_remaining: mass,
+        time_remaining: time,
+      }),
+    });
+    if (!res.ok) {
+      const d = await res.json();
+      err.textContent = d.error || `Error ${res.status}`;
+      err.classList.remove('hidden');
+      return;
+    }
+    closeAddWHModal();
+    loadWHConnections();
+  } catch (e) {
+    err.textContent = 'Network error — is the server running?';
+    err.classList.remove('hidden');
+  }
+}
+
+// ── Twitch Integration ────────────────────────────────────────────────────
+
+async function updateTwitchStatus() {
+  try {
+    const res = await fetch('/api/twitch/status');
+    if (!res.ok) return;
+    const data = await res.json();
+    
+    const badge = document.getElementById('twitch-status');
+    if (badge) {
+      if (data.live) {
+        badge.textContent = '🔴 LIVE';
+        badge.style.color = 'red';
+      } else {
+        badge.textContent = '⚫ Offline';
+        badge.style.color = 'gray';
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load Twitch status:', e);
+  }
 }

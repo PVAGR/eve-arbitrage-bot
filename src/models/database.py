@@ -79,6 +79,18 @@ def init_db():
                 station         TEXT    NOT NULL DEFAULT '',
                 added_at        TEXT    NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS system_cache (
+                system_id       INTEGER PRIMARY KEY,
+                info_json       TEXT    NOT NULL,
+                fetched_at      TEXT    NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS station_cache (
+                station_id      INTEGER PRIMARY KEY,
+                info_json       TEXT    NOT NULL,
+                fetched_at      TEXT    NOT NULL
+            );
         """)
 
 
@@ -227,3 +239,124 @@ def update_inventory_quantity(row_id: int, new_quantity: int) -> bool:
             (new_quantity, row_id)
         )
     return cur.rowcount > 0
+
+
+# ── System and station cache ─────────────────────────────────────────────────
+
+def get_cached_system(system_id: int, ttl_hours: int = 24) -> dict | None:
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT info_json, fetched_at FROM system_cache WHERE system_id=?",
+            (system_id,)
+        ).fetchone()
+    if row is None:
+        return None
+    fetched = datetime.fromisoformat(row["fetched_at"])
+    age_hours = (datetime.now(timezone.utc).replace(tzinfo=None) - fetched).total_seconds() / 3600
+    if age_hours > ttl_hours:
+        return None
+    return json.loads(row["info_json"])
+
+
+def upsert_system(system_id: int, info: dict):
+    with get_connection() as conn:
+        conn.execute(
+            """INSERT INTO system_cache (system_id, info_json, fetched_at)
+               VALUES (?, ?, ?)
+               ON CONFLICT(system_id) DO UPDATE SET
+                 info_json=excluded.info_json,
+                 fetched_at=excluded.fetched_at""",
+            (system_id, json.dumps(info), datetime.now(timezone.utc).replace(tzinfo=None).isoformat())
+        )
+
+
+def get_cached_station(station_id: int, ttl_hours: int = 24) -> dict | None:
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT info_json, fetched_at FROM station_cache WHERE station_id=?",
+            (station_id,)
+        ).fetchone()
+    if row is None:
+        return None
+    fetched = datetime.fromisoformat(row["fetched_at"])
+    age_hours = (datetime.now(timezone.utc).replace(tzinfo=None) - fetched).total_seconds() / 3600
+    if age_hours > ttl_hours:
+        return None
+    return json.loads(row["info_json"])
+
+
+def upsert_station(station_id: int, info: dict):
+    with get_connection() as conn:
+        conn.execute(
+            """INSERT INTO station_cache (station_id, info_json, fetched_at)
+               VALUES (?, ?, ?)
+               ON CONFLICT(station_id) DO UPDATE SET
+                 info_json=excluded.info_json,
+                 fetched_at=excluded.fetched_at""",
+            (station_id, json.dumps(info), datetime.now(timezone.utc).replace(tzinfo=None).isoformat())
+        )
+
+
+# ── Database class interface ─────────────────────────────────────────────────
+
+class Database:
+    """Class wrapper for database operations."""
+    
+    def __init__(self, config: dict = None):
+        """Initialize database. Config parameter is optional for compatibility."""
+        init_db()
+    
+    def add_inventory(self, type_id: int, item_name: str, quantity: int, 
+                      cost_basis_isk: float, station: str = "") -> int:
+        """Add inventory item and return ID."""
+        with get_connection() as conn:
+            conn.execute(
+                """INSERT INTO inventory (type_id, item_name, quantity, 
+                   cost_basis_isk, station, added_at)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (type_id, item_name, quantity, cost_basis_isk, station,
+                 datetime.now(timezone.utc).replace(tzinfo=None).isoformat())
+            )
+            return conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+    
+    def get_inventory(self) -> list:
+        """Get all inventory items."""
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT id, type_id, item_name, quantity, cost_basis_isk, station FROM inventory"
+            ).fetchall()
+            return [dict(row) for row in rows]
+    
+    def update_inventory_quantity(self, row_id: int, quantity: int) -> bool:
+        """Update inventory quantity. Returns True if found."""
+        with get_connection() as conn:
+            cursor = conn.execute(
+                "UPDATE inventory SET quantity = ? WHERE id = ?",
+                (quantity, row_id)
+            )
+            return cursor.rowcount > 0
+    
+    def delete_inventory(self, row_id: int) -> bool:
+        """Delete inventory item. Returns True if found."""
+        with get_connection() as conn:
+            cursor = conn.execute("DELETE FROM inventory WHERE id = ?", (row_id,))
+            return cursor.rowcount > 0
+    
+    def get_results(self, limit: int = 100) -> list:
+        """Get arbitrage results."""
+        with get_connection() as conn:
+            rows = conn.execute(
+                """SELECT * FROM arbitrage_results 
+                   ORDER BY total_profit_potential DESC LIMIT ?""",
+                (limit,)
+            ).fetchall()
+            return [dict(row) for row in rows]
+    
+    def get_last_scan_time(self) -> str:
+        """Get time of last scan."""
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT MAX(scanned_at) as last_scan FROM arbitrage_results"
+            ).fetchone()
+            return row["last_scan"] if row["last_scan"] else "never"
+
