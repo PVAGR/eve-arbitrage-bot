@@ -3,14 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EVE Arbitrage Bot</title>
+  <title>EVE Personal Tracker & Arbitrage Bot</title>
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
   <header>
     <div class="header-inner">
-      <h1>&#9670; EVE Arbitrage Bot</h1>
+      <h1>&#9670; EVE Personal Tracker</h1>
       <div class="header-right">
+        {% if has_character %}
+        <span id="char-status" class="badge">Character: —</span>
+        {% endif %}
+        {% if has_twitch %}
+        <span id="twitch-status" class="badge">Stream: —</span>
+        {% endif %}
         <span id="last-scan-label" class="muted">Last scan: —</span>
         <button id="btn-scan" class="btn btn-primary" onclick="triggerScan()">Run Scan</button>
       </div>
@@ -18,13 +24,129 @@
   </header>
 
   <nav class="tabs">
-    <button class="tab active" onclick="showTab('opportunities')">Opportunities</button>
+    {% if has_character %}
+    <button class="tab active" onclick="showTab('character')">Character</button>
+    {% endif %}
+    {% if has_wormholes %}
+    <button class="tab {% if not has_character %}active{% endif %}" onclick="showTab('wormholes')">Wormholes</button>
+    {% endif %}
+    <button class="tab {% if not has_character and not has_wormholes %}active{% endif %}" onclick="showTab('opportunities')">Arbitrage</button>
     <button class="tab" onclick="showTab('inventory')">Inventory</button>
     <button class="tab" onclick="showTab('lookup')">Price Lookup</button>
   </nav>
 
+  <!-- ── CHARACTER STATUS ────────────────────────────────────────────── -->
+  {% if has_character %}
+  <section id="tab-character" class="tab-content active">
+    <div class="status-grid">
+      <div class="status-card">
+        <h3>Location</h3>
+        <div id="char-location">Loading...</div>
+      </div>
+      <div class="status-card">
+        <h3>Ship</h3>
+        <div id="char-ship">Loading...</div>
+      </div>
+      <div class="status-card">
+        <h3>Wallet</h3>
+        <div id="char-wallet">Loading...</div>
+      </div>
+      <div class="status-card">
+        <h3>Online Status</h3>
+        <div id="char-online">Loading...</div>
+      </div>
+    </div>
+
+    <h3>Recent Transactions</h3>
+    <div class="table-wrap">
+      <table id="char-transactions-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Item</th>
+            <th>Type</th>
+            <th class="num">Quantity</th>
+            <th class="num">Unit Price</th>
+            <th class="num">Total Value</th>
+          </tr>
+        </thead>
+        <tbody id="char-transactions-tbody">
+          <tr><td colspan="6" class="muted center">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Active Market Orders</h3>
+    <div class="table-wrap">
+      <table id="char-orders-table">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Type</th>
+            <th class="num">Price</th>
+            <th class="num">Remaining</th>
+            <th class="num">Total</th>
+            <th>Duration</th>
+            <th>State</th>
+          </tr>
+        </thead>
+        <tbody id="char-orders-tbody">
+          <tr><td colspan="7" class="muted center">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ── WORMHOLE TRACKING ───────────────────────────────────────────── -->
+  {% if has_wormholes %}
+  <section id="tab-wormholes" class="tab-content {% if not has_character %}active{% else %}hidden{% endif %}">
+    <div class="toolbar">
+      <button class="btn btn-primary" onclick="openAddWHModal()">+ Add Connection</button>
+      <button class="btn" onclick="loadWormholes()">Refresh</button>
+    </div>
+
+    <h3>Active Connections</h3>
+    <div class="table-wrap">
+      <table id="wh-connections-table">
+        <thead>
+          <tr>
+            <th>Source</th>
+            <th>→</th>
+            <th>Destination</th>
+            <th>Type</th>
+            <th>Mass</th>
+            <th>Time</th>
+            <th>Last Seen</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="wh-connections-tbody">
+          <tr><td colspan="8" class="muted center">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Jump History</h3>
+    <div class="table-wrap">
+      <table id="wh-history-table">
+        <thead>
+          <tr>
+            <th>System</th>
+            <th>Time</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody id="wh-history-tbody">
+          <tr><td colspan="3" class="muted center">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+
   <!-- ── OPPORTUNITIES ───────────────────────────────────────────────── -->
-  <section id="tab-opportunities" class="tab-content active">
+  <section id="tab-opportunities" class="tab-content {% if has_character or has_wormholes %}hidden{% else %}active{% endif %}">
     <div class="toolbar">
       <input id="filter-item" type="text" placeholder="Filter by item name…" oninput="filterOpportunities()" />
       <select id="filter-pair" onchange="filterOpportunities()">
@@ -116,9 +238,48 @@
     </div>
   </div>
 
+  <!-- ── ADD WORMHOLE CONNECTION MODAL ───────────────────────────────── -->
+  {% if has_wormholes %}
+  <div id="add-wh-modal" class="modal hidden">
+    <div class="modal-box">
+      <h2>Add Wormhole Connection</h2>
+      <label>Source System ID
+        <input id="wh-source" type="number" placeholder="30000142" />
+      </label>
+      <label>Destination System ID
+        <input id="wh-dest" type="number" placeholder="31000005" />
+      </label>
+      <label>WH Type
+        <input id="wh-type" type="text" placeholder="K162, A239, etc." />
+      </label>
+      <label>Mass Status
+        <select id="wh-mass">
+          <option>Stable</option>
+          <option>Destabilized</option>
+          <option>Critical</option>
+        </select>
+      </label>
+      <label>Time Status
+        <select id="wh-time">
+          <option>Fresh</option>
+          <option>EOL</option>
+        </select>
+      </label>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeAddWHModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitAddWH()">Add</button>
+      </div>
+      <p id="add-wh-error" class="error hidden"></p>
+    </div>
+  </div>
+  {% endif %}
+
   <script src="/static/app.js"></script>
   <script>
     const AUTO_REFRESH = {{ auto_refresh }} * 1000;
+    const HAS_CHARACTER = {{ 'true' if has_character else 'false' }};
+    const HAS_WORMHOLES = {{ 'true' if has_wormholes else 'false' }};
+    const HAS_TWITCH = {{ 'true' if has_twitch else 'false' }};
     init(AUTO_REFRESH);
   </script>
 </body>
