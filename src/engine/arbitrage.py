@@ -92,7 +92,7 @@ def find_opportunities(
         if available_vol < min_vol:
             continue
 
-        if max_invest > 0 and buy_price > max_invest:
+        if max_invest > 0 and buy_price * available_vol > max_invest:
             continue
 
         item_info = esi.get_item_info(type_id)

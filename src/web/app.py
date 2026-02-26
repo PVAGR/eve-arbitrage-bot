@@ -55,7 +55,10 @@ def index():
 
 @app.route("/api/opportunities")
 def api_opportunities():
-    limit = int(request.args.get("limit", 100))
+    try:
+        limit = int(request.args.get("limit", 100))
+    except (ValueError, TypeError):
+        abort(400, "limit must be an integer")
     results = db.get_results(limit)
     return jsonify({"results": results, "count": len(results)})
 
@@ -138,8 +141,11 @@ def api_inventory_add():
         abort(400, "JSON body required")
 
     item_name = data.get("item_name", "").strip()
-    quantity = int(data.get("quantity", 0))
-    cost_basis = float(data.get("cost_basis_isk", 0))
+    try:
+        quantity = int(data.get("quantity", 0))
+        cost_basis = float(data.get("cost_basis_isk", 0))
+    except (ValueError, TypeError):
+        abort(400, "quantity must be an integer and cost_basis_isk must be a number")
     station = data.get("station", "").strip()
 
     if not item_name or quantity <= 0 or cost_basis < 0:
@@ -155,8 +161,13 @@ def api_inventory_add():
         type_id = results[0]["type_id"]
         item_name = results[0]["name"]
 
+    try:
+        type_id = int(type_id)
+    except (ValueError, TypeError):
+        abort(400, "type_id must be an integer")
+
     row_id = db.add_inventory(
-        type_id=int(type_id),
+        type_id=type_id,
         item_name=item_name,
         quantity=quantity,
         cost_basis_isk=cost_basis,
@@ -176,7 +187,10 @@ def api_inventory_delete(row_id: int):
 @app.route("/api/inventory/<int:row_id>", methods=["PATCH"])
 def api_inventory_patch(row_id: int):
     data = request.get_json() or {}
-    new_qty = int(data.get("quantity", 0))
+    try:
+        new_qty = int(data.get("quantity", 0))
+    except (ValueError, TypeError):
+        abort(400, "quantity must be an integer")
     if new_qty <= 0:
         abort(400, "quantity must be > 0")
     db.update_inventory_quantity(row_id, new_qty)
