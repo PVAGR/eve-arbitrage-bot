@@ -107,6 +107,7 @@ h1 {
   color: var(--red);
 }
 .btn.btn-danger:hover { background: rgba(255,82,82,0.1); }
+.btn.btn-sm { padding: 3px 8px; font-size: 12px; }
 
 /* ── Toolbar ────────────────────────────────────────────── */
 .toolbar {
