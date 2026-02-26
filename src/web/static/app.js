@@ -15,7 +15,7 @@ function init(autoRefreshMs) {
   if (autoRefreshMs > 0) {
     setInterval(() => {
       loadOpportunities();
-      loadScanStatus();
+      updateScanStatus();
     }, autoRefreshMs);
   }
 }
