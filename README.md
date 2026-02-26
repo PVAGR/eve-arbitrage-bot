@@ -1,39 +1,63 @@
 # EVE Arbitrage Bot
 
-A market arbitrage scanner for EVE Online. Finds items you can buy cheaply at one trade hub and sell at a profit at another, accounting for broker fees, sales tax, and hauling costs.
+[![Build](https://github.com/PVAGR/eve-arbitrage-bot/actions/workflows/build.yml/badge.svg)](https://github.com/PVAGR/eve-arbitrage-bot/actions/workflows/build.yml)
 
-All market data is fetched from the public [EVE ESI API](https://esi.evetech.net/) — no login or character authentication required.
+A market arbitrage scanner for EVE Online. Finds items you can buy cheaply at one trade hub and sell at a profit at another, accounting for broker fees, sales tax, and hauling costs.
 
 ---
 
-## Features
+## Download & Play (No Python required)
+
+**Every push to main automatically builds a Windows exe.**
+
+### Steps:
+1. Go to **[Releases](https://github.com/PVAGR/eve-arbitrage-bot/releases/tag/latest)**
+2. Download **`EVEArbitrageBot.exe`** and **`config.yaml`**
+3. Put them in the **same folder**
+4. Double-click **`EVEArbitrageBot.exe`**
+
+That's it. The interactive menu opens in your terminal window.
+
+> The bot creates a `data/` folder next to the exe to store its database. No other setup needed.
+
+---
+
+## What It Does
+
+All market data is fetched from the public [EVE ESI API](https://esi.evetech.net/) — no login or character authentication required.
 
 - Scans all major trade hubs (Jita, Amarr, Dodixie, Rens, Hek) for cross-region arbitrage
 - Full fee model: broker fees, sales tax, and per-m³ hauling costs
 - SQLite caching — avoids hammering ESI on repeated scans
 - Web dashboard with live opportunity table, inventory tracker, and price lookup
+- Interactive TUI menu — just run the exe and navigate with number keys
 - CLI for scripting and headless use
 
 ---
 
-## Requirements
+## Interactive Menu
 
-- Python 3.10+
-- pip
+When you launch the exe (or run `python run.py` with no arguments), you get a full menu:
 
-## Installation
-
-```bash
-git clone https://github.com/PVAGR/eve-arbitrage-bot.git
-cd eve-arbitrage-bot
-pip install -r requirements.txt
 ```
+◆  EVE  ARBITRAGE  BOT  ◆
+
+  1   Run Market Scan
+  2   View Opportunities
+  3   Manage Inventory
+  4   Price Lookup
+  5   Web Dashboard
+
+  Q   Quit
+```
+
+Navigate with number keys. No command-line flags needed.
 
 ---
 
 ## Configuration
 
-Edit `config.yaml` before running. Key settings:
+Edit `config.yaml` to match your in-game skills and set profit thresholds:
 
 ```yaml
 fees:
@@ -45,12 +69,12 @@ fees:
 filters:
   min_profit_margin_pct: 10   # Only show opps with >= 10% margin
   min_net_isk_profit: 1000000 # Only show opps with >= 1M ISK profit/unit
-  max_investment_per_item: 0  # 0 = no cap
+  max_investment_per_item: 0  # 0 = no cap on total trade size
   min_volume_available: 1
 
 scan:
-  cache_ttl_minutes: 5   # How long to cache ESI market pages
-  pairs:                 # Region pairs to compare (both directions scanned)
+  cache_ttl_minutes: 5        # How long to cache ESI market data
+  pairs:                      # Region pairs to compare (both directions scanned)
     - [Jita, Amarr]
     - [Jita, Dodixie]
     ...
@@ -58,83 +82,55 @@ scan:
 
 ---
 
-## CLI Usage
+## Build from Source (optional)
+
+If you have Python 3.10+ installed and want to build the exe yourself:
 
 ```bash
-# Run a full scan across all configured region pairs
-python run.py scan
+git clone https://github.com/PVAGR/eve-arbitrage-bot.git
+cd eve-arbitrage-bot
+pip install -r requirements.txt
 
-# Scan one specific route only
-python run.py scan --regions Jita Amarr
+# Run directly (no build needed)
+python run.py
 
-# Show top 20 opportunities from the last scan
-python run.py top 20
+# Or build your own exe
+build.bat
+```
 
-# Price check an item across all hubs
-python run.py lookup "Tritanium"
+---
 
-# Inventory management
+## CLI Usage (for scripting)
+
+```bash
+python run.py scan                          # Full market scan
+python run.py scan --regions Jita Amarr     # Scan one route
+python run.py top 20                        # Show top 20 opportunities
+python run.py lookup "Tritanium"            # Price check across all hubs
 python run.py inventory list
 python run.py inventory add "Tritanium" 100000 5.50
-python run.py inventory add "Tritanium" 100000 5.50 --station "Jita IV - Moon 4"
 python run.py inventory update ID NEW_QTY
 python run.py inventory remove ID
-
-# Start the web dashboard
-python run.py web
+python run.py web                           # Start web dashboard
 python run.py web --port 8080
-python run.py web --host 0.0.0.0 --port 8080
 ```
 
 ---
 
 ## Web Dashboard
 
-```bash
-python run.py web
-```
+From the menu select **5**, or run `python run.py web`, then open [http://127.0.0.1:5000](http://127.0.0.1:5000).
 
-Open [http://127.0.0.1:5000](http://127.0.0.1:5000) in your browser.
+**Opportunities** — sortable/filterable table of arbitrage results. Click "Run Scan" to refresh.
 
-**Opportunities tab** — sortable/filterable table of all arbitrage results from the last scan. Click "Run Scan" to trigger a fresh scan in the background.
+**Inventory** — track items with cost basis. Shows Jita market price and unrealized P&L.
 
-**Inventory tab** — track items you own with cost basis. Shows current Jita sell price and unrealized P&L.
-
-**Price Lookup tab** — search any item to see current best prices across all hubs.
-
----
-
-## Project Structure
-
-```
-run.py                  # Entry point
-config.yaml             # All user-configurable settings
-requirements.txt
-
-src/
-  config.py             # YAML config loader
-  api/
-    esi.py              # ESI API client with caching + rate limiting
-  engine/
-    fees.py             # Profit/margin calculations
-    arbitrage.py        # Core opportunity-finding algorithm
-    scanner.py          # Orchestrates full scans, saves results
-  models/
-    database.py         # SQLite layer (cache, results, inventory)
-  cli/
-    main.py             # Click CLI commands
-  web/
-    app.py              # Flask REST API
-    templates/          # Dashboard HTML
-    static/             # JS + CSS
-data/
-  eve_arbitrage.db      # SQLite database (created on first run)
-```
+**Price Lookup** — search any item name to see prices across all trade hubs.
 
 ---
 
 ## Notes
 
-- Market data is cached in SQLite to reduce ESI calls. Set `cache_ttl_minutes` lower for fresher data (at the cost of more API requests).
-- Opportunities are based on **buying at the cheapest sell order** in the source region and **hitting the highest buy order** in the destination. This is the conservative, instantly executable trade.
-- The bot does not place orders. All actions are read-only against ESI.
+- Opportunities are based on **buying at the cheapest sell order** in the source region and **hitting the highest buy order** in the destination — the conservative, instantly executable trade.
+- Market data is cached to reduce API calls. Lower `cache_ttl_minutes` for fresher data.
+- The bot does not place orders. All ESI calls are read-only.

@@ -1,0 +1,74 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pyinstaller
+
+      - name: Build exe with PyInstaller
+        shell: cmd
+        run: |
+          pyinstaller ^
+            --onefile ^
+            --name EVEArbitrageBot ^
+            --paths src ^
+            --add-data "src\web\templates;templates" ^
+            --add-data "src\web\static;static" ^
+            --hidden-import flask ^
+            --hidden-import jinja2 ^
+            --hidden-import werkzeug ^
+            --hidden-import click ^
+            --hidden-import yaml ^
+            --hidden-import requests ^
+            --hidden-import urllib3 ^
+            --hidden-import certifi ^
+            --hidden-import charset_normalizer ^
+            --hidden-import idna ^
+            --hidden-import rich ^
+            --hidden-import rich.prompt ^
+            --hidden-import rich.table ^
+            --hidden-import rich.panel ^
+            --hidden-import rich.progress ^
+            --hidden-import sqlite3 ^
+            run.py
+
+      - name: Write release notes
+        run: >-
+          python -c
+          "open('notes.md','w').write('## Download\n\n1. Download **EVEArbitrageBot.exe** and **config.yaml** below\n2. Put them in the **same folder**\n3. Double-click **EVEArbitrageBot.exe**\n\n---\n\nEdit **config.yaml** to match your in-game Broker Relations and Accounting skill levels and to tune profit filters.\n\nThe bot saves its database in a `data/` folder next to the exe automatically.\n')"
+
+      - name: Delete old latest release (if exists)
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release delete latest --yes --cleanup-tag 2>$null; $true
+
+      - name: Publish GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create latest `
+            --title "Latest Build" `
+            --notes-file notes.md `
+            dist\EVEArbitrageBot.exe `
+            config.yaml
