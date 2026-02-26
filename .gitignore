@@ -32,3 +32,7 @@ Thumbs.db
 # Secrets
 .env
 secrets.yaml
+
+# Temp files
+tmpclaude-*
+nul
