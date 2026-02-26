@@ -5,7 +5,7 @@
 :: ============================================================
 
 echo [1/3] Installing build dependencies...
-pip install pyinstaller --quiet
+pip install -r requirements.txt pyinstaller --quiet
 if errorlevel 1 (
     echo ERROR: pip install failed. Make sure Python and pip are on your PATH.
     pause & exit /b 1
@@ -18,21 +18,21 @@ pyinstaller ^
   --paths src ^
   --add-data "src\web\templates;templates" ^
   --add-data "src\web\static;static" ^
-  --hidden-import flask ^
-  --hidden-import jinja2 ^
-  --hidden-import werkzeug ^
-  --hidden-import click ^
+  --collect-all flask ^
+  --collect-all werkzeug ^
+  --collect-all jinja2 ^
+  --collect-all click ^
+  --collect-all rich ^
   --hidden-import yaml ^
   --hidden-import requests ^
   --hidden-import urllib3 ^
   --hidden-import certifi ^
   --hidden-import charset_normalizer ^
   --hidden-import idna ^
-  --hidden-import rich ^
-  --hidden-import rich.prompt ^
-  --hidden-import rich.table ^
-  --hidden-import rich.panel ^
-  --hidden-import rich.progress ^
+  --hidden-import itsdangerous ^
+  --hidden-import blinker ^
+  --hidden-import markupsafe ^
+  --hidden-import pygments ^
   --hidden-import sqlite3 ^
   run.py
 
